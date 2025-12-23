@@ -230,6 +230,11 @@ Press `?` to see all Vim-style keyboard shortcuts.
 
 ![Keyboard Shortcuts](screenshots/07-keyboard-shortcuts.png)
 
+### Settings
+Configure minimum message threshold and manage bookmarks.
+
+![Settings](screenshots/08-settings-modal.png)
+
 ---
 
 ## How It Works

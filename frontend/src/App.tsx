@@ -65,6 +65,11 @@ function App() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [minMessages, setMinMessages] = useState(() => {
+    const saved = localStorage.getItem('deja-claude-min-messages');
+    return saved ? parseInt(saved) : 3;
+  });
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
@@ -97,20 +102,34 @@ function App() {
     return bookmarks.has(`${projectPath}:${sessionId}`);
   };
 
-  // Date filter
+  // Date and message count filter
   useEffect(() => {
-    if (!dateFrom && !dateTo) {
-      setFilteredSessions(sessions);
-      return;
-    }
-    const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
-    const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : new Date();
+    let filtered = sessions.filter(s => s.messages.length >= minMessages);
 
-    setFilteredSessions(sessions.filter(s => {
-      const sessionDate = new Date(s.createdAt);
-      return sessionDate >= fromDate && sessionDate <= toDate;
-    }));
-  }, [sessions, dateFrom, dateTo]);
+    if (dateFrom || dateTo) {
+      const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
+      const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : new Date();
+      filtered = filtered.filter(s => {
+        const sessionDate = new Date(s.createdAt);
+        return sessionDate >= fromDate && sessionDate <= toDate;
+      });
+    }
+
+    setFilteredSessions(filtered);
+  }, [sessions, dateFrom, dateTo, minMessages]);
+
+  // Save minMessages to localStorage
+  const updateMinMessages = (value: number) => {
+    setMinMessages(value);
+    localStorage.setItem('deja-claude-min-messages', value.toString());
+  };
+
+  // Clear all bookmarks
+  const clearAllBookmarks = () => {
+    localStorage.removeItem('deja-claude-bookmarks');
+    setBookmarks(new Set());
+    setBookmarkedSessions([]);
+  };
 
   // Calculate stats
   useEffect(() => {
@@ -502,6 +521,71 @@ function App() {
         </div>
       )}
 
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setShowSettings(false)}>
+          <div className="bg-[#0a0a18] border border-orange-500/30 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl shadow-orange-500/20" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white font-cyber">SETTINGS</h3>
+              <button onClick={() => setShowSettings(false)} className="text-white/50 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Min Messages Filter */}
+              <div>
+                <label className="block text-sm text-white/70 mb-2">Minimum messages to show session</label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={minMessages}
+                    onChange={(e) => updateMinMessages(parseInt(e.target.value))}
+                    className="flex-1 h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-orange-500"
+                  />
+                  <span className="w-8 text-center text-orange-400 font-mono font-bold">{minMessages}</span>
+                </div>
+                <p className="text-xs text-white/40 mt-1">Hide sessions with fewer than {minMessages} messages</p>
+              </div>
+
+              {/* Bookmarks Section */}
+              <div className="border-t border-white/10 pt-4">
+                <label className="block text-sm text-white/70 mb-2">Bookmarks</label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/50">{bookmarks.size} bookmarked sessions</span>
+                  {bookmarks.size > 0 && (
+                    <button
+                      onClick={() => {
+                        if (confirm('Clear all bookmarks?')) {
+                          clearAllBookmarks();
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Version Info */}
+              <div className="border-t border-white/10 pt-4">
+                <div className="flex items-center justify-between text-xs text-white/40">
+                  <span>Version</span>
+                  <span className="font-mono">v1.1.0</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-white/40 mt-2">
+                  <span>Storage</span>
+                  <span className="font-mono text-cyan-400/60">localStorage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[100px] animate-pulse" />
@@ -882,7 +966,11 @@ function App() {
               >
                 <span className="text-xs font-mono">?</span>
               </button>
-              <button className="p-2 rounded-lg hover:bg-white/5 text-white/30 hover:text-white/70 transition-all">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="p-2 rounded-lg hover:bg-white/5 text-white/30 hover:text-white/70 transition-all"
+                title="Settings"
+              >
                 <Settings size={16} />
               </button>
             </div>
