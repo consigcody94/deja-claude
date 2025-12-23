@@ -145,62 +145,55 @@ function App() {
     }
   };
 
-  // Fixed export function - safer blob handling
-  const exportToMarkdown = useCallback(async () => {
+  // Fast export function
+  const exportToMarkdown = useCallback(() => {
     if (!selectedSession || exporting) return;
 
     setExporting(true);
 
-    try {
-      // Build markdown content
-      let md = `# Chat Session\n\n`;
-      md += `**Project:** ${selectedSession.project || 'Unknown'}\n`;
-      md += `**Date:** ${new Date(selectedSession.createdAt).toLocaleString()}\n`;
-      md += `**Messages:** ${selectedSession.messages.length}\n\n---\n\n`;
+    // Use requestAnimationFrame for smoother UI update
+    requestAnimationFrame(() => {
+      try {
+        // Build markdown content
+        const parts: string[] = [
+          `# Chat Session\n`,
+          `**Project:** ${selectedSession.project || 'Unknown'}\n`,
+          `**Date:** ${new Date(selectedSession.createdAt).toLocaleString()}\n`,
+          `**Messages:** ${selectedSession.messages.length}\n\n---\n`
+        ];
 
-      for (const msg of selectedSession.messages) {
-        if (msg.role === 'user') {
-          md += `## You\n\n${msg.content}\n\n---\n\n`;
-        } else if (msg.role === 'tool') {
-          md += `## Tool: ${msg.toolName || 'Unknown'}\n\n${msg.content}\n`;
-          if (msg.toolInput) {
-            md += `\n\`\`\`\n${msg.toolInput}\n\`\`\`\n`;
+        for (const msg of selectedSession.messages) {
+          if (msg.role === 'user') {
+            parts.push(`\n## You\n\n${msg.content}\n\n---\n`);
+          } else if (msg.role === 'tool') {
+            parts.push(`\n## Tool: ${msg.toolName || 'Unknown'}\n\n${msg.content}\n`);
+            if (msg.toolInput) {
+              parts.push(`\n\`\`\`\n${msg.toolInput}\n\`\`\`\n`);
+            }
+            parts.push(`\n---\n`);
+          } else {
+            parts.push(`\n## Claude\n\n${msg.content}\n\n---\n`);
           }
-          md += `\n---\n\n`;
-        } else {
-          md += `## Claude\n\n${msg.content}\n\n---\n\n`;
         }
-      }
 
-      // Create blob with delay for stability
-      await new Promise(resolve => setTimeout(resolve, 100));
+        const md = parts.join('');
+        const blob = new Blob([md], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
 
-      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+        // Create link and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `deja-claude-${selectedSession.id.slice(0, 8)}.md`;
+        link.click();
 
-      // Create and configure link
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `deja-claude-${selectedSession.id.slice(0, 8)}-${Date.now()}.md`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-
-      // Small delay before click
-      await new Promise(resolve => setTimeout(resolve, 50));
-      link.click();
-
-      // Cleanup after download starts
-      setTimeout(() => {
-        document.body.removeChild(link);
+        // Cleanup
         URL.revokeObjectURL(url);
-      }, 1000);
-
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
-    } finally {
-      setExporting(false);
-    }
+        setExporting(false);
+      } catch (error) {
+        console.error('Export failed:', error);
+        setExporting(false);
+      }
+    });
   }, [selectedSession, exporting]);
 
   const formatDate = (dateStr: string) => {
