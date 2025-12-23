@@ -145,48 +145,62 @@ function App() {
     }
   };
 
-  // Fast export function
+  // Full export - includes everything
   const exportToMarkdown = useCallback(() => {
     if (!selectedSession || exporting) return;
 
     setExporting(true);
 
-    // Use requestAnimationFrame for smoother UI update
     requestAnimationFrame(() => {
       try {
-        // Build markdown content
         const parts: string[] = [
-          `# Chat Session\n`,
-          `**Project:** ${selectedSession.project || 'Unknown'}\n`,
-          `**Date:** ${new Date(selectedSession.createdAt).toLocaleString()}\n`,
-          `**Messages:** ${selectedSession.messages.length}\n\n---\n`
+          `# Chat Session\n\n`,
+          `| Property | Value |\n`,
+          `|----------|-------|\n`,
+          `| **Project** | \`${selectedSession.project || 'Unknown'}\` |\n`,
+          `| **Session ID** | \`${selectedSession.id}\` |\n`,
+          `| **Date** | ${new Date(selectedSession.createdAt).toLocaleString()} |\n`,
+          `| **Messages** | ${selectedSession.messages.length} |\n`,
+          `\n---\n\n`
         ];
 
-        for (const msg of selectedSession.messages) {
+        selectedSession.messages.forEach((msg, idx) => {
+          const timestamp = msg.timestamp ? `\n> *${new Date(msg.timestamp).toLocaleString()}*\n` : '';
+
           if (msg.role === 'user') {
-            parts.push(`\n## You\n\n${msg.content}\n\n---\n`);
+            parts.push(`## 💬 You (Message ${idx + 1})\n${timestamp}\n${msg.content}\n\n---\n\n`);
           } else if (msg.role === 'tool') {
-            parts.push(`\n## Tool: ${msg.toolName || 'Unknown'}\n\n${msg.content}\n`);
+            parts.push(`## 🔧 Tool: \`${msg.toolName || 'Unknown'}\` (Message ${idx + 1})\n${timestamp}\n`);
+
+            // Tool input/parameters
             if (msg.toolInput) {
-              parts.push(`\n\`\`\`\n${msg.toolInput}\n\`\`\`\n`);
+              parts.push(`### Input\n\n\`\`\`json\n${msg.toolInput}\n\`\`\`\n\n`);
             }
-            parts.push(`\n---\n`);
+
+            // Tool output/result
+            if (msg.content) {
+              parts.push(`### Output\n\n\`\`\`\n${msg.content}\n\`\`\`\n\n`);
+            }
+
+            parts.push(`---\n\n`);
           } else {
-            parts.push(`\n## Claude\n\n${msg.content}\n\n---\n`);
+            // Assistant message
+            parts.push(`## 🤖 Claude (Message ${idx + 1})\n${timestamp}\n${msg.content}\n\n---\n\n`);
           }
-        }
+        });
+
+        // Add footer
+        parts.push(`\n---\n\n*Exported from [Déjà Claude](https://github.com/consigcody94/deja-claude) on ${new Date().toLocaleString()}*\n`);
 
         const md = parts.join('');
         const blob = new Blob([md], { type: 'text/markdown' });
         const url = URL.createObjectURL(blob);
 
-        // Create link and trigger download
         const link = document.createElement('a');
         link.href = url;
         link.download = `deja-claude-${selectedSession.id.slice(0, 8)}.md`;
         link.click();
 
-        // Cleanup
         URL.revokeObjectURL(url);
         setExporting(false);
       } catch (error) {
