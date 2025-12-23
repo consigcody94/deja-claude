@@ -1,5 +1,66 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, ChevronRight, Zap, Clock, Hash, Terminal, Cpu, Database, Bookmark, BookmarkCheck, BarChart3, Filter, X } from 'lucide-react';
+import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, ChevronRight, Zap, Clock, Hash, Terminal, Cpu, Database, Bookmark, BookmarkCheck, BarChart3, Filter, X, Copy, Check, ChevronDown, ChevronUp, Tag, StickyNote, Minimize2, Type } from 'lucide-react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+// Code block component with copy button
+const CodeBlock = ({ code, language }: { code: string; language?: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group my-3">
+      <button
+        onClick={handleCopy}
+        className="absolute right-2 top-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/50 hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10"
+        title="Copy code"
+      >
+        {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+      </button>
+      <SyntaxHighlighter
+        language={language || 'typescript'}
+        style={oneDark}
+        customStyle={{
+          margin: 0,
+          borderRadius: '0.75rem',
+          padding: '1.25rem',
+          fontSize: '0.75rem',
+          background: 'rgba(0,0,0,0.4)',
+          border: '1px solid rgba(255,255,255,0.1)',
+        }}
+      >
+        {code}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
+
+// Parse content for code blocks
+const parseContent = (content: string) => {
+  const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];
+  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', content: content.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: 'code', content: match[2].trim(), language: match[1] });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push({ type: 'text', content: content.slice(lastIndex) });
+  }
+
+  return parts.length > 0 ? parts : [{ type: 'text' as const, content }];
+};
 
 const API_URL = '/api';
 
@@ -70,6 +131,30 @@ function App() {
     const saved = localStorage.getItem('deja-claude-min-messages');
     return saved ? parseInt(saved) : 3;
   });
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    const saved = localStorage.getItem('deja-claude-recent-searches');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [sessionTags, setSessionTags] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('deja-claude-tags');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [sessionNotes, setSessionNotes] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('deja-claude-notes');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [toolFilter, setToolFilter] = useState<string>('');
+  const [compactView, setCompactView] = useState(() => {
+    return localStorage.getItem('deja-claude-compact') === 'true';
+  });
+  const [fontSize, setFontSize] = useState(() => {
+    const saved = localStorage.getItem('deja-claude-fontsize');
+    return saved ? parseInt(saved) : 14;
+  });
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTag, setNewTag] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [collapsedTools, setCollapsedTools] = useState<Set<number>>(new Set());
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +214,82 @@ function App() {
     localStorage.removeItem('deja-claude-bookmarks');
     setBookmarks(new Set());
     setBookmarkedSessions([]);
+  };
+
+  // Add recent search
+  const addRecentSearch = (query: string) => {
+    if (!query.trim()) return;
+    const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 10);
+    setRecentSearches(updated);
+    localStorage.setItem('deja-claude-recent-searches', JSON.stringify(updated));
+  };
+
+  // Session tags management
+  const getSessionKey = (session: Session) => `${session.project}:${session.id}`;
+
+  const addTag = (session: Session, tag: string) => {
+    const key = getSessionKey(session);
+    const current = sessionTags[key] || [];
+    if (!current.includes(tag)) {
+      const updated = { ...sessionTags, [key]: [...current, tag] };
+      setSessionTags(updated);
+      localStorage.setItem('deja-claude-tags', JSON.stringify(updated));
+    }
+  };
+
+  const removeTag = (session: Session, tag: string) => {
+    const key = getSessionKey(session);
+    const current = sessionTags[key] || [];
+    const updated = { ...sessionTags, [key]: current.filter(t => t !== tag) };
+    setSessionTags(updated);
+    localStorage.setItem('deja-claude-tags', JSON.stringify(updated));
+  };
+
+  const getTags = (session: Session) => sessionTags[getSessionKey(session)] || [];
+
+  // Session notes management
+  const setNote = (session: Session, note: string) => {
+    const key = getSessionKey(session);
+    const updated = { ...sessionNotes, [key]: note };
+    setSessionNotes(updated);
+    localStorage.setItem('deja-claude-notes', JSON.stringify(updated));
+  };
+
+  const getNote = (session: Session) => sessionNotes[getSessionKey(session)] || '';
+
+  // Settings helpers
+  const updateCompactView = (value: boolean) => {
+    setCompactView(value);
+    localStorage.setItem('deja-claude-compact', value.toString());
+  };
+
+  const updateFontSize = (value: number) => {
+    setFontSize(value);
+    localStorage.setItem('deja-claude-fontsize', value.toString());
+  };
+
+  // Toggle tool collapse
+  const toggleToolCollapse = (idx: number) => {
+    const updated = new Set(collapsedTools);
+    if (updated.has(idx)) {
+      updated.delete(idx);
+    } else {
+      updated.add(idx);
+    }
+    setCollapsedTools(updated);
+  };
+
+  // Get unique tools used in current sessions
+  const getUsedTools = () => {
+    const tools = new Set<string>();
+    sessions.forEach(s => {
+      s.messages.forEach(m => {
+        if (m.role === 'tool' && m.toolName) {
+          tools.add(m.toolName);
+        }
+      });
+    });
+    return Array.from(tools).sort();
   };
 
   // Calculate stats
@@ -350,6 +511,7 @@ function App() {
     setIsSearching(true);
     setView('search');
     setActiveSearchQuery(searchQuery);
+    addRecentSearch(searchQuery);
     try {
       const res = await fetch(`${API_URL}/history/search?q=${encodeURIComponent(searchQuery)}&limit=50`);
       const data = await res.json();
@@ -532,10 +694,10 @@ function App() {
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-5 max-h-[60vh] overflow-y-auto">
               {/* Min Messages Filter */}
               <div>
-                <label className="block text-sm text-white/70 mb-2">Minimum messages to show session</label>
+                <label className="block text-sm text-white/70 mb-2">Minimum messages to show</label>
                 <div className="flex items-center gap-4">
                   <input
                     type="range"
@@ -547,14 +709,49 @@ function App() {
                   />
                   <span className="w-8 text-center text-orange-400 font-mono font-bold">{minMessages}</span>
                 </div>
-                <p className="text-xs text-white/40 mt-1">Hide sessions with fewer than {minMessages} messages</p>
+              </div>
+
+              {/* Font Size */}
+              <div className="border-t border-white/10 pt-4">
+                <label className="block text-sm text-white/70 mb-2">
+                  <Type size={14} className="inline mr-2" />
+                  Font Size
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="10"
+                    max="20"
+                    value={fontSize}
+                    onChange={(e) => updateFontSize(parseInt(e.target.value))}
+                    className="flex-1 h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                  />
+                  <span className="w-12 text-center text-cyan-400 font-mono font-bold">{fontSize}px</span>
+                </div>
+              </div>
+
+              {/* Compact View */}
+              <div className="border-t border-white/10 pt-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm text-white/70 flex items-center gap-2">
+                    <Minimize2 size={14} />
+                    Compact View
+                  </span>
+                  <button
+                    onClick={() => updateCompactView(!compactView)}
+                    className={`w-12 h-6 rounded-full transition-colors ${compactView ? 'bg-cyan-500' : 'bg-white/20'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${compactView ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </label>
+                <p className="text-xs text-white/40 mt-1">Denser session list layout</p>
               </div>
 
               {/* Bookmarks Section */}
               <div className="border-t border-white/10 pt-4">
                 <label className="block text-sm text-white/70 mb-2">Bookmarks</label>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/50">{bookmarks.size} bookmarked sessions</span>
+                  <span className="text-sm text-white/50">{bookmarks.size} saved</span>
                   {bookmarks.size > 0 && (
                     <button
                       onClick={() => {
@@ -570,15 +767,30 @@ function App() {
                 </div>
               </div>
 
+              {/* Recent Searches */}
+              <div className="border-t border-white/10 pt-4">
+                <label className="block text-sm text-white/70 mb-2">Recent Searches</label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/50">{recentSearches.length} saved</span>
+                  {recentSearches.length > 0 && (
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('deja-claude-recent-searches');
+                        setRecentSearches([]);
+                      }}
+                      className="px-3 py-1.5 text-xs text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Version Info */}
               <div className="border-t border-white/10 pt-4">
                 <div className="flex items-center justify-between text-xs text-white/40">
                   <span>Version</span>
-                  <span className="font-mono">v1.1.0</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-white/40 mt-2">
-                  <span>Storage</span>
-                  <span className="font-mono text-cyan-400/60">localStorage</span>
+                  <span className="font-mono">v1.2.0</span>
                 </div>
               </div>
             </div>
@@ -611,7 +823,7 @@ function App() {
             </div>
           </div>
 
-          {/* Search */}
+          {/* Search with Recent Searches */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
             <input
@@ -619,6 +831,8 @@ function App() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              onFocus={() => document.getElementById('recent-searches')?.classList.remove('hidden')}
+              onBlur={() => setTimeout(() => document.getElementById('recent-searches')?.classList.add('hidden'), 200)}
               placeholder="Search... (press /)"
               className="relative w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm font-mono focus:border-cyan-500/50 focus:bg-white/10 transition-all duration-300"
             />
@@ -628,7 +842,39 @@ function App() {
                 Scan
               </button>
             )}
+            {/* Recent Searches Dropdown */}
+            {recentSearches.length > 0 && (
+              <div id="recent-searches" className="hidden absolute top-full left-0 right-0 mt-2 bg-[#0a0a18] border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl">
+                <div className="px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider border-b border-white/5">Recent</div>
+                {recentSearches.slice(0, 5).map((search, idx) => (
+                  <button
+                    key={idx}
+                    onMouseDown={() => { setSearchQuery(search); handleSearch(); }}
+                    className="w-full px-3 py-2 text-left text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2"
+                  >
+                    <Clock size={12} className="text-white/30" />
+                    {search}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Tool Filter */}
+          {selectedProject && getUsedTools().length > 0 && (
+            <div className="mt-3">
+              <select
+                value={toolFilter}
+                onChange={(e) => setToolFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white/70 font-mono focus:border-cyan-500/50"
+              >
+                <option value="">All tools</option>
+                {getUsedTools().map(tool => (
+                  <option key={tool} value={tool}>{tool}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* View Toggle - 4 tabs now */}
@@ -1057,24 +1303,114 @@ function App() {
               </div>
             </div>
 
+            {/* Session Tags & Notes */}
+            {selectedProject && (
+              <div className="px-8 py-3 border-b border-white/5 bg-white/5 flex items-center gap-4 flex-wrap">
+                {/* Tags */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Tag size={14} className="text-white/40" />
+                  {getTags(selectedSession).map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-lg border border-purple-500/30 flex items-center gap-1 group"
+                    >
+                      {tag}
+                      <button
+                        onClick={() => removeTag(selectedSession, tag)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                  {showTagInput ? (
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newTag.trim()) {
+                          addTag(selectedSession, newTag.trim());
+                          setNewTag('');
+                          setShowTagInput(false);
+                        } else if (e.key === 'Escape') {
+                          setShowTagInput(false);
+                          setNewTag('');
+                        }
+                      }}
+                      onBlur={() => { setShowTagInput(false); setNewTag(''); }}
+                      autoFocus
+                      placeholder="Add tag..."
+                      className="px-2 py-1 bg-white/10 border border-white/20 rounded-lg text-xs text-white w-24 focus:border-purple-500/50"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setShowTagInput(true)}
+                      className="px-2 py-1 text-white/30 hover:text-purple-400 text-xs border border-dashed border-white/20 rounded-lg hover:border-purple-500/50 transition-colors"
+                    >
+                      + Tag
+                    </button>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div className="flex items-center gap-2 ml-auto">
+                  <StickyNote size={14} className="text-white/40" />
+                  {showNoteInput ? (
+                    <input
+                      type="text"
+                      defaultValue={getNote(selectedSession)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setNote(selectedSession, (e.target as HTMLInputElement).value);
+                          setShowNoteInput(false);
+                        } else if (e.key === 'Escape') {
+                          setShowNoteInput(false);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        setNote(selectedSession, e.target.value);
+                        setShowNoteInput(false);
+                      }}
+                      autoFocus
+                      placeholder="Add note..."
+                      className="px-2 py-1 bg-white/10 border border-white/20 rounded-lg text-xs text-white w-48 focus:border-amber-500/50"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setShowNoteInput(true)}
+                      className={`px-2 py-1 text-xs rounded-lg transition-colors ${
+                        getNote(selectedSession)
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'text-white/30 hover:text-amber-400 border border-dashed border-white/20 hover:border-amber-500/50'
+                      }`}
+                    >
+                      {getNote(selectedSession) || '+ Note'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-black/20" ref={messagesContainerRef}>
+            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-black/20" ref={messagesContainerRef} style={{ fontSize: `${fontSize}px` }}>
               {selectedSession.messages.map((msg, idx) => {
                 const isHighlighted = highlightedMessageIdx === idx;
                 const hasSearchMatch = activeSearchQuery && msg.content.toLowerCase().includes(activeSearchQuery.toLowerCase());
+                const isToolCollapsed = collapsedTools.has(idx);
 
                 return (
                   <div
                     key={idx}
                     data-message-idx={idx}
-                    className={`relative px-8 py-6 border-b border-white/5 transition-all duration-500
+                    className={`relative px-8 ${compactView ? 'py-3' : 'py-6'} border-b border-white/5 transition-all duration-500
                       ${msg.role === 'user' ? 'bg-transparent' : msg.role === 'tool' ? 'bg-purple-500/5' : 'bg-cyan-500/5'}
                       ${isHighlighted ? 'highlight-message' : ''}
                       ${hasSearchMatch && !isHighlighted ? 'border-l-2 border-l-cyan-500' : ''}`}
                   >
                     <div className="max-w-4xl mx-auto">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold uppercase border
+                      <div className={`flex items-center gap-4 ${compactView ? 'mb-2' : 'mb-4'}`}>
+                        <div className={`${compactView ? 'w-8 h-8' : 'w-10 h-10'} rounded-xl flex items-center justify-center text-xs font-bold uppercase border
                           ${msg.role === 'user'
                             ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30 text-blue-400'
                             : msg.role === 'tool'
@@ -1090,19 +1426,35 @@ function App() {
                             <span className="text-xs text-white/30 ml-3 font-mono">{new Date(msg.timestamp).toLocaleTimeString()}</span>
                           )}
                         </div>
+                        {msg.role === 'tool' && msg.toolInput && (
+                          <button
+                            onClick={() => toggleToolCollapse(idx)}
+                            className="p-1 text-white/30 hover:text-white/70 transition-colors"
+                          >
+                            {isToolCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          </button>
+                        )}
                         {hasSearchMatch && (
                           <span className="text-[10px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full border border-cyan-500/30">Match</span>
                         )}
                       </div>
-                      <div className="pl-14">
+                      <div className={compactView ? 'pl-10' : 'pl-14'}>
                         {msg.role === 'tool' && msg.toolInput ? (
-                          <details className="group">
-                            <summary className="cursor-pointer text-white/80 hover:text-cyan-400 transition-colors text-sm font-medium">{msg.content}</summary>
-                            <pre className="mt-4 p-5 bg-black/30 rounded-xl text-xs overflow-x-auto border border-white/5 font-mono text-cyan-300/80">{msg.toolInput}</pre>
-                          </details>
+                          <div>
+                            <div className="text-white/80 text-sm font-medium">{msg.content}</div>
+                            {!isToolCollapsed && (
+                              <CodeBlock code={msg.toolInput} language="json" />
+                            )}
+                          </div>
                         ) : (
-                          <div className="whitespace-pre-wrap text-white/80 text-sm leading-relaxed">
-                            {activeSearchQuery ? highlightSearchTerm(msg.content, activeSearchQuery) : msg.content}
+                          <div className="whitespace-pre-wrap text-white/80 leading-relaxed">
+                            {parseContent(msg.content).map((part, i) => (
+                              part.type === 'code' ? (
+                                <CodeBlock key={i} code={part.content} language={part.language} />
+                              ) : (
+                                <span key={i}>{activeSearchQuery ? highlightSearchTerm(part.content, activeSearchQuery) : part.content}</span>
+                              )
+                            ))}
                           </div>
                         )}
                       </div>

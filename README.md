@@ -137,6 +137,41 @@ Export any session as formatted Markdown with:
 
 > **Note:** Export may take up to 60 seconds for large sessions while converting.
 
+### Syntax Highlighting
+Code blocks are beautifully highlighted using Prism with the One Dark theme. Supports all major languages including TypeScript, Python, Go, Rust, and more.
+
+### Copy Code Button
+Hover over any code block to reveal a copy button. One click copies to clipboard with visual confirmation.
+
+### Collapsible Tool Calls
+Tool inputs and outputs can be collapsed/expanded with a single click. Perfect for sessions with lots of file operations.
+
+### Tool Type Filter
+Filter sessions by the tools used (Read, Write, Bash, Edit, etc.). Great for finding sessions where you worked on specific tasks.
+
+### Recent Searches
+Your last 5 searches appear as clickable chips below the search bar. Clear them anytime in Settings.
+
+### Session Tags
+Add custom tags to any session for easy categorization. Tags persist in localStorage and appear as colorful badges.
+
+### Session Notes
+Attach notes to important sessions. Perfect for remembering why a conversation was significant.
+
+### Compact View Mode
+Toggle a denser layout in Settings for power users who want to see more sessions at once.
+
+### Font Size Control
+Adjust the message font size (10-20px) in Settings to match your preference.
+
+### Settings Panel
+Access all preferences in one place:
+- Minimum message filter (hide short sessions)
+- Font size adjustment
+- Compact view toggle
+- Clear bookmarks
+- Clear recent searches
+
 ### Cyberpunk Theme
 Futuristic UI with animated backgrounds, neon glows, and glassmorphism effects. Easy on the eyes at 2 AM.
 
@@ -320,6 +355,16 @@ The dev server runs:
 - [x] Cyberpunk UI theme
 - [x] Jump to exact search match
 - [x] Smart session filtering
+- [x] Syntax highlighting with Prism
+- [x] Copy code button
+- [x] Collapsible tool calls
+- [x] Tool type filter
+- [x] Recent searches
+- [x] Session tags
+- [x] Session notes
+- [x] Compact view mode
+- [x] Font size control
+- [x] Settings panel
 - [ ] Full-text SQLite index for massive histories
 - [ ] Custom themes
 - [ ] Session diffing
