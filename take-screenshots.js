@@ -58,7 +58,7 @@ async function takeScreenshots() {
   console.log('Taking screenshot: Search results...');
   await page.keyboard.press('/');
   await delay(300);
-  await page.keyboard.type('function');
+  await page.keyboard.type('se');
   await delay(2000);
   await page.screenshot({
     path: path.join(screenshotDir, '04-search-results.png'),
