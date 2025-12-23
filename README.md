@@ -200,13 +200,35 @@ Press `?` anywhere in the app to see all shortcuts:
 
 ## Screenshots
 
-> **Coming Soon:** Screenshots will be added showing:
-> - Project browser with cyberpunk theme
-> - Search with context previews and highlighting
-> - Statistics dashboard with activity charts
-> - Bookmarked sessions view
-> - Keyboard shortcuts modal
-> - Export in progress
+### Project Browser
+Browse all your Claude projects with the cyberpunk-themed interface.
+
+![Projects View](screenshots/01-projects-view.png)
+
+### Search
+Full-text search across all sessions with real-time results.
+
+![Search View](screenshots/03-search-view.png)
+
+### Search Results
+Context previews show matching text with surrounding content.
+
+![Search Results](screenshots/04-search-results.png)
+
+### Statistics Dashboard
+Track your Claude usage patterns and activity over time.
+
+![Statistics View](screenshots/05-statistics-view.png)
+
+### Bookmarks
+Save important sessions for quick access later.
+
+![Bookmarks View](screenshots/06-bookmarks-view.png)
+
+### Keyboard Shortcuts
+Press `?` to see all Vim-style keyboard shortcuts.
+
+![Keyboard Shortcuts](screenshots/07-keyboard-shortcuts.png)
 
 ---
 
