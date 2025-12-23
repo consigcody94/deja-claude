@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/D%C3%A9j%C3%A0_Claude-E87B35?style=for-the-badge&logoColor=white&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIxIDE1YTIgMiAwIDAgMS0yIDJIN2wtNCA0VjVhMiAyIDAgMCAxIDItMmgxNGEyIDIgMiAwIDEgMiAyeiI+PC9wYXRoPjwvc3ZnPg==" alt="Déjà Claude" height="40">
+  <img src="https://i.imgur.com/yEySgcI.png" alt="Déjà Claude Logo" width="200">
 </p>
 
 <h1 align="center">Déjà Claude</h1>
@@ -14,114 +14,142 @@
   <a href="#-the-problem">The Problem</a> •
   <a href="#-features">Features</a> •
   <a href="#-quick-start">Quick Start</a> •
-  <a href="#-screenshots">Screenshots</a> •
-  <a href="#-how-it-works">How It Works</a>
+  <a href="#-keyboard-shortcuts">Shortcuts</a> •
+  <a href="#-screenshots">Screenshots</a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React">
+  <img src="https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React">
   <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js">
-  <img src="https://img.shields.io/badge/Tailwind-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind">
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="MIT License">
 </p>
 
 ---
 
-## 😤 The Problem
+## The Problem
 
 You've been using **Claude Code** for weeks. Hundreds of conversations. Thousands of brilliant solutions.
 
-Now you need to find that *one* session where Claude helped you:
-- Set up that authentication flow
-- Write that perfect regex pattern
-- Debug that database migration
-- Explain that complex algorithm
+Now you need to find that *one* session where Claude helped you set up authentication, write that perfect regex, or debug that migration.
 
 **Your options today:**
 
 | What You Do | How It Feels |
 |-------------|--------------|
-| 📁 Browse `~/.claude/projects/` | *"Which folder was it again..."* |
-| 📜 Open random `.jsonl` files | *"This isn't it... this isn't it either..."* |
-| 🔍 `grep` through JSON blobs | *"I can't read any of this"* |
-| 😩 Ask Claude again | *"Didn't we already solve this?"* |
+| Browse `~/.claude/projects/` | *"Which folder was it again..."* |
+| Open random `.jsonl` files | *"This isn't it... this isn't it either..."* |
+| `grep` through JSON blobs | *"I can't read any of this"* |
+| Ask Claude again | *"Didn't we already solve this?"* |
 
 ---
 
-## ✨ The Solution
+## The Solution
 
-**Déjà Claude** — A beautiful interface to search, browse, and export your Claude Code history.
+**Déjà Claude** — A futuristic cyberpunk interface to search, browse, and export your Claude Code history.
 
 ```
-╭─────────────────────────────────────────────────────────────────────╮
-│  🔍 authentication jwt token                                        │
-├────────────────────────┬────────────────────────────────────────────┤
-│                        │                                            │
-│  📁 PROJECTS           │  💬 API Authentication Setup               │
-│  ──────────────        │  Dec 15, 2024 • 47 messages                │
-│                        │                                            │
-│  /home/dev/myapp  (12) │  ┌─────────────────────────────────────┐   │
-│  /home/dev/api    (8)  │  │ You                        2:34 PM  │   │
-│                        │  │ How do I implement JWT auth with... │   │
-│  🔎 SEARCH RESULTS     │  └─────────────────────────────────────┘   │
-│  ──────────────        │                                            │
-│  3 sessions found      │  ┌─────────────────────────────────────┐   │
-│                        │  │ Claude                     2:34 PM  │   │
-│  ▸ API Authentication  │  │ I'll help you implement secure JWT  │   │
-│    ├─ [You] "...jwt    │  │ authentication. Let's start with... │   │
-│    │   token valid..." │  │                                     │   │
-│    └─ [Claude] "...the │  │ [Match] "...the authentication      │   │
-│        auth flow..."   │  │          flow validates tokens..."  │   │
-│                        │  └─────────────────────────────────────┘   │
-│                        │                                            │
-│                        │                    [📥 Export Markdown]    │
-╰────────────────────────┴────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│  ┌─────────────────────────────────────────────────────────────────────────┐ │
+│  │  🔍 authentication jwt token                          [12/01] → [12/20] │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+├─────────────────────────┬────────────────────────────────────────────────────┤
+│                         │                                                    │
+│  ╔═══════════════════╗  │  ⚡ API Authentication Setup                       │
+│  ║ 📁 PROJECTS       ║  │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│  ║ 🔍 SEARCH         ║  │  Dec 15 • 47 messages                  ★ [Export] │
+│  ║ 📊 STATISTICS     ║  │                                                    │
+│  ║ ★  BOOKMARKS      ║  │  ┌──────────────────────────────────────────────┐  │
+│  ╚═══════════════════╝  │  │ 👤 You                            2:34 PM    │  │
+│                         │  │ How do I implement JWT auth with refresh...  │  │
+│  ──────────────────     │  └──────────────────────────────────────────────┘  │
+│  myapp (12 sessions)    │                                                    │
+│  api-server (8)         │  ┌──────────────────────────────────────────────┐  │
+│  web-frontend (5)       │  │ 🤖 Claude                          2:35 PM   │  │
+│                         │  │ I'll help you implement secure JWT auth.     │  │
+│  ──────────────────     │  │ Here's a complete implementation...          │  │
+│  📅 Dec 15              │  │                                              │  │
+│  ├─ API Auth Setup  ★   │  │ ▼ Tool: Write [src/auth/jwt.ts]             │  │
+│  └─ Database Schema     │  └──────────────────────────────────────────────┘  │
+│                         │                                                    │
+│  [?] Keyboard shortcuts │                    Press ? for keyboard shortcuts  │
+╰─────────────────────────┴────────────────────────────────────────────────────╯
 ```
 
 ---
 
-## 🚀 Features
+## Features
 
-### 🔍 Instant Full-Text Search
-Search across **all** your Claude sessions simultaneously. Results show context previews so you know exactly what you're clicking.
+### Full-Text Search
+Search across **all** your Claude sessions simultaneously with instant results. Context previews show exactly what you're clicking.
 
-### 📍 Jump to Exact Match
-Click a search result → land directly on that message. No more scrolling through 500-message sessions hunting for one line.
+### Date Range Filters
+Filter sessions by date range. Perfect for finding "that conversation from last week" or reviewing a specific time period.
 
-### 🎯 Smart Noise Filtering
-Automatically hides:
+### Statistics Dashboard
+Track your Claude usage patterns:
+- Total projects, sessions, and messages
+- Activity heatmap over time
+- Peak usage hours
+- Sessions per day breakdown
+
+### Bookmarks
+Save important sessions for quick access later. Bookmarks persist in your browser's local storage.
+
+### Keyboard Navigation (Vim-style)
+Navigate the entire app without touching your mouse:
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Navigate up/down in lists |
+| `Enter` | Select item |
+| `Esc` | Go back / Close |
+| `b` | Toggle bookmark |
+| `e` | Export session |
+| `/` | Focus search |
+| `?` | Show shortcuts help |
+| `1-4` | Switch tabs |
+
+### Jump to Exact Match
+Click a search result → land directly on that message with animated highlighting. No more scrolling through 500-message sessions.
+
+### Smart Filtering
+Automatically hides noise:
 - Warmup sessions (`"warmup"`, `"test"`, `"hi"`)
 - Sessions with only 1-2 messages
 - Empty or trivial conversations
 
-**See only the conversations that matter.**
-
-### 🖍️ Search Highlighting
-- **Yellow highlight** on matching text
-- **Orange border** on messages containing matches
+### Search Highlighting
+- **Cyan highlight** on matching text
+- **Glowing border** on messages containing matches
 - **"Match" badge** for quick visual scanning
 - **Animated ring** when jumping to a message
 
-### 💾 One-Click Export
-Export any session as clean, formatted Markdown. Perfect for:
-- Documentation
-- Sharing solutions with teammates
-- Archiving important conversations
+### Complete Export
+Export any session as formatted Markdown with:
+- Full tool inputs and outputs
+- Timestamps on every message
+- Message numbers for reference
+- Code blocks preserved
+- Collapsible tool details
 
-### 🌙 Native Dark Theme
-Claude-inspired design that's easy on the eyes at 2 AM.
+> **Note:** Export may take up to 60 seconds for large sessions while converting.
 
-### ⚡ Zero Configuration
+### Cyberpunk Theme
+Futuristic UI with animated backgrounds, neon glows, and glassmorphism effects. Easy on the eyes at 2 AM.
+
+### Zero Configuration
 Just run it. Déjà Claude finds your history at `~/.claude/projects/` automatically.
 
 ---
 
-## 🏃 Quick Start
+## Quick Start
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/deja-claude.git
+git clone https://github.com/consigcody94/deja-claude.git
 cd deja-claude
 
 # Install dependencies
@@ -135,35 +163,54 @@ Open **http://localhost:5173** — start searching!
 
 ---
 
-## 📸 Screenshots
+## Keyboard Shortcuts
 
-<details>
-<summary><b>🖼️ Project Browser</b></summary>
-<br>
-Browse all your Claude projects sorted by recent activity. Session counts show only meaningful conversations.
-</details>
+Press `?` anywhere in the app to see all shortcuts:
 
-<details>
-<summary><b>🔍 Search with Context Previews</b></summary>
-<br>
-Search results show match previews with surrounding context. Click any preview to jump directly to that message.
-</details>
-
-<details>
-<summary><b>💬 Message Viewer with Highlights</b></summary>
-<br>
-Search terms highlighted in yellow. Matching messages marked with orange left border and "Match" badge.
-</details>
-
-<details>
-<summary><b>🛠️ Tool Call Details</b></summary>
-<br>
-Expandable sections show exactly what tools Claude used and their inputs.
-</details>
+```
+╭─────────────────────────────────────────╮
+│           ⌨️ KEYBOARD SHORTCUTS         │
+├─────────────────────────────────────────┤
+│                                         │
+│  NAVIGATION                             │
+│  ─────────                              │
+│  j / ↓      Move down                   │
+│  k / ↑      Move up                     │
+│  Enter      Select item                 │
+│  Esc        Go back / Close             │
+│                                         │
+│  ACTIONS                                │
+│  ───────                                │
+│  b          Toggle bookmark             │
+│  e          Export session              │
+│  /          Focus search                │
+│  ?          Show this help              │
+│                                         │
+│  VIEWS                                  │
+│  ─────                                  │
+│  1          Projects tab                │
+│  2          Search tab                  │
+│  3          Statistics tab              │
+│  4          Bookmarks tab               │
+│                                         │
+╰─────────────────────────────────────────╯
+```
 
 ---
 
-## ⚙️ How It Works
+## Screenshots
+
+> **Coming Soon:** Screenshots will be added showing:
+> - Project browser with cyberpunk theme
+> - Search with context previews and highlighting
+> - Statistics dashboard with activity charts
+> - Bookmarked sessions view
+> - Keyboard shortcuts modal
+> - Export in progress
+
+---
+
+## How It Works
 
 Déjà Claude reads your existing Claude Code history. **It never modifies anything** — purely read-only.
 
@@ -181,7 +228,7 @@ The JSONL files contain your full conversation history. Déjà Claude parses the
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 deja-claude/
@@ -190,9 +237,10 @@ deja-claude/
 │       ├── server.ts       # HTTP server & API routes
 │       └── history.ts      # JSONL parser & search engine
 │
-├── frontend/               # React + Vite + Tailwind
+├── frontend/               # React 18 + Vite + Tailwind
 │   └── src/
-│       └── App.tsx         # Main application
+│       ├── App.tsx         # Main application (1000+ lines)
+│       └── index.css       # Cyberpunk theme styles
 │
 └── package.json            # Monorepo workspace root
 ```
@@ -202,19 +250,20 @@ deja-claude/
 | **API** | Express | REST endpoints for projects, sessions, search |
 | **Parser** | Custom | JSONL parsing, content extraction, deduplication |
 | **Search** | In-memory | Full-text search with match context extraction |
-| **UI** | React + Tailwind | Responsive dark-themed interface |
+| **UI** | React + Tailwind | Cyberpunk-themed responsive interface |
+| **State** | React hooks + localStorage | Bookmarks, preferences |
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 - **Node.js** 18+
 - **Claude Code CLI** with existing conversation history
-- A modern browser
+- A modern browser (Chrome, Firefox, Safari, Edge)
 
 ---
 
-## 🛠️ Development
+## Development
 
 ```bash
 # Development mode with hot reload
@@ -233,18 +282,24 @@ The dev server runs:
 
 ---
 
-## 🗺️ Roadmap
+## Feature Checklist
 
-- [ ] **Session Resume** — Jump back into any session from the viewer
-- [ ] **Date Filters** — Filter by date range
-- [ ] **Statistics** — Usage patterns and insights
-- [ ] **Bookmarks** — Save important sessions
-- [ ] **Full-text Index** — SQLite FTS for instant search at scale
-- [ ] **Keyboard Navigation** — Vim-style shortcuts
+- [x] Full-text search across all sessions
+- [x] Date range filtering
+- [x] Statistics dashboard
+- [x] Bookmarks with localStorage persistence
+- [x] Vim-style keyboard navigation
+- [x] Complete export with tool details
+- [x] Cyberpunk UI theme
+- [x] Jump to exact search match
+- [x] Smart session filtering
+- [ ] Full-text SQLite index for massive histories
+- [ ] Custom themes
+- [ ] Session diffing
 
 ---
 
-## 🤔 Why "Déjà Claude"?
+## Why "Déjà Claude"?
 
 **Déjà vu** (French: *"already seen"*) — that eerie feeling you've experienced something before.
 
@@ -252,16 +307,16 @@ The dev server runs:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome! Feel free to:
-- 🐛 Report bugs
-- 💡 Suggest features
-- 🔧 Submit PRs
+- Report bugs
+- Suggest features
+- Submit PRs
 
 ---
 
-## 📄 License
+## License
 
 MIT License — do whatever you want with it.
 
@@ -272,5 +327,5 @@ MIT License — do whatever you want with it.
   <br><br>
   <em>Stop searching. Start finding.</em>
   <br><br>
-  ⭐ <a href="../../stargazers">Star this repo</a> if Déjà Claude saved you time!
+  <a href="../../stargazers">Star this repo</a> if Déjà Claude saved you time!
 </p>
