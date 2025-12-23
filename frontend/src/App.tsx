@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, Sparkles, ChevronRight, Zap, Clock, Hash } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, Sparkles, ChevronRight, Zap, Clock, Hash, Terminal, Cpu, Database } from 'lucide-react';
 
 const API_URL = '/api';
 
@@ -45,6 +45,7 @@ function App() {
   const [view, setView] = useState<'projects' | 'search'>('projects');
   const [highlightedMessageIdx, setHighlightedMessageIdx] = useState<number | null>(null);
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [exporting, setExporting] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -144,30 +145,63 @@ function App() {
     }
   };
 
-  const exportToMarkdown = () => {
-    if (!selectedSession) return;
-    let md = `# Chat Session\n\n`;
-    md += `**Project:** ${selectedSession.project}\n`;
-    md += `**Date:** ${new Date(selectedSession.createdAt).toLocaleString()}\n\n---\n\n`;
-    selectedSession.messages.forEach((msg) => {
-      if (msg.role === 'user') {
-        md += `**You:**\n\n${msg.content}\n\n---\n\n`;
-      } else if (msg.role === 'tool') {
-        md += `**Tool (${msg.toolName}):**\n\n${msg.content}\n`;
-        if (msg.toolInput) md += `\n\`\`\`json\n${msg.toolInput}\n\`\`\`\n`;
-        md += `\n---\n\n`;
-      } else {
-        md += `**Claude:**\n\n${msg.content}\n\n---\n\n`;
+  // Fixed export function - safer blob handling
+  const exportToMarkdown = useCallback(async () => {
+    if (!selectedSession || exporting) return;
+
+    setExporting(true);
+
+    try {
+      // Build markdown content
+      let md = `# Chat Session\n\n`;
+      md += `**Project:** ${selectedSession.project || 'Unknown'}\n`;
+      md += `**Date:** ${new Date(selectedSession.createdAt).toLocaleString()}\n`;
+      md += `**Messages:** ${selectedSession.messages.length}\n\n---\n\n`;
+
+      for (const msg of selectedSession.messages) {
+        if (msg.role === 'user') {
+          md += `## You\n\n${msg.content}\n\n---\n\n`;
+        } else if (msg.role === 'tool') {
+          md += `## Tool: ${msg.toolName || 'Unknown'}\n\n${msg.content}\n`;
+          if (msg.toolInput) {
+            md += `\n\`\`\`\n${msg.toolInput}\n\`\`\`\n`;
+          }
+          md += `\n---\n\n`;
+        } else {
+          md += `## Claude\n\n${msg.content}\n\n---\n\n`;
+        }
       }
-    });
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `session-${selectedSession.id.slice(0, 8)}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+
+      // Create blob with delay for stability
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      // Create and configure link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `deja-claude-${selectedSession.id.slice(0, 8)}-${Date.now()}.md`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+
+      // Small delay before click
+      await new Promise(resolve => setTimeout(resolve, 50));
+      link.click();
+
+      // Cleanup after download starts
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  }, [selectedSession, exporting]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -189,9 +223,10 @@ function App() {
     const lowerQuery = query.toLowerCase();
     let lastIdx = 0;
     let idx = lowerText.indexOf(lowerQuery);
+    let keyIdx = 0;
     while (idx !== -1) {
       if (idx > lastIdx) parts.push(text.slice(lastIdx, idx));
-      parts.push(<mark key={idx}>{text.slice(idx, idx + query.length)}</mark>);
+      parts.push(<mark key={keyIdx++}>{text.slice(idx, idx + query.length)}</mark>);
       lastIdx = idx + query.length;
       idx = lowerText.indexOf(lowerQuery, lastIdx);
     }
@@ -202,167 +237,184 @@ function App() {
   const totalSessions = projects.reduce((sum, p) => sum + p.sessionCount, 0);
 
   return (
-    <div className="h-screen flex bg-claude-bg">
+    <div className="h-screen flex bg-[#020208] overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        {/* Floating orbs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
       {/* Sidebar */}
-      <div className="w-80 glass-dark flex flex-col border-r border-white/5">
+      <div className="w-80 relative z-10 flex flex-col border-r border-cyan-500/10 bg-gradient-to-b from-[#0a0a18]/95 to-[#050510]/95 backdrop-blur-xl">
+        {/* Sidebar glow line */}
+        <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-cyan-500/50 to-transparent" />
+
         {/* Header */}
-        <div className="p-5 border-b border-white/5">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="relative">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-claude-orange via-amber-500 to-claude-orange flex items-center justify-center shadow-glow">
-                <Sparkles size={20} className="text-white" />
+        <div className="p-6 border-b border-white/5">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-cyan-500 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
+              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                <Sparkles size={22} className="text-white" />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-claude-bg pulse-dot" />
+              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#0a0a18] pulse-dot" />
             </div>
             <div>
-              <h1 className="font-semibold text-lg gradient-text">Déjà Claude</h1>
-              <p className="text-xs text-claude-muted">Find any conversation</p>
+              <h1 className="font-bold text-xl font-cyber gradient-text tracking-wide">DÉJÀ CLAUDE</h1>
+              <p className="text-xs text-cyan-400/60 font-mono">MEMORY_BANK.ACTIVE</p>
             </div>
           </div>
 
-          {/* Search */}
+          {/* Search Input */}
           <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-2.5 bg-claude-elevated/50 border border-white/5 rounded-xl
-                text-claude-text placeholder-claude-muted text-sm
-                focus:border-claude-orange/50 focus:bg-claude-elevated transition-all duration-200"
+              placeholder="Search memory banks..."
+              className="relative w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl
+                text-white placeholder-white/30 text-sm font-mono
+                focus:border-cyan-500/50 focus:bg-white/10 transition-all duration-300"
             />
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-claude-muted group-focus-within:text-claude-orange transition-colors" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-cyan-400 transition-colors" />
             {searchQuery && (
               <button
                 onClick={handleSearch}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-claude-orange/20 text-claude-orange text-xs rounded-lg hover:bg-claude-orange/30 transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-lg hover:shadow-lg hover:shadow-orange-500/30 transition-all uppercase tracking-wider"
               >
-                Search
+                Scan
               </button>
             )}
           </div>
         </div>
 
         {/* View Toggle */}
-        <div className="flex p-1 m-4 bg-claude-elevated/30 rounded-xl">
+        <div className="flex p-1.5 m-4 bg-white/5 rounded-xl border border-white/5">
           <button
             onClick={() => setView('projects')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200
+            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center justify-center gap-2
               ${view === 'projects'
-                ? 'bg-gradient-to-r from-claude-orange/20 to-amber-500/20 text-claude-orange shadow-inner-glow'
-                : 'text-claude-muted hover:text-claude-text'}`}
+                ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-400 shadow-lg shadow-orange-500/10 border border-orange-500/20'
+                : 'text-white/40 hover:text-white/70'}`}
           >
-            <FolderOpen size={14} className="inline mr-2" />
+            <Database size={14} />
             Projects
           </button>
           <button
             onClick={() => setView('search')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200
+            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center justify-center gap-2
               ${view === 'search'
-                ? 'bg-gradient-to-r from-claude-orange/20 to-amber-500/20 text-claude-orange shadow-inner-glow'
-                : 'text-claude-muted hover:text-claude-text'}`}
+                ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 shadow-lg shadow-cyan-500/10 border border-cyan-500/20'
+                : 'text-white/40 hover:text-white/70'}`}
           >
-            <Search size={14} className="inline mr-2" />
+            <Search size={14} />
             Search
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-3">
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
           {view === 'projects' ? (
             <>
               {!selectedProject ? (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between px-2 py-2 mb-2">
-                    <span className="text-xs font-medium text-claude-muted uppercase tracking-wider flex items-center gap-2">
-                      <Hash size={12} />
-                      {projects.length} Projects
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-2 py-3">
+                    <span className="text-xs font-mono text-cyan-400/60 uppercase tracking-widest flex items-center gap-2">
+                      <Terminal size={12} />
+                      {projects.length} DATABASES
                     </span>
                     <button
                       onClick={fetchProjects}
-                      className="p-1.5 rounded-lg hover:bg-white/5 text-claude-muted hover:text-claude-text transition-all"
+                      className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan-400 transition-all"
                     >
                       <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                   </div>
 
                   {loading && projects.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <div className="w-8 h-8 border-2 border-claude-orange/30 border-t-claude-orange rounded-full animate-spin mx-auto mb-3" />
-                      <p className="text-sm text-claude-muted">Loading projects...</p>
+                    <div className="py-16 text-center">
+                      <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mx-auto mb-4" />
+                      <p className="text-sm text-white/40 font-mono">SCANNING...</p>
                     </div>
                   ) : (
                     projects.map((project, idx) => (
                       <button
                         key={project.path}
                         onClick={() => handleProjectSelect(project)}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl
-                          hover:bg-white/5 transition-all duration-200 text-left group card-hover fade-up"
+                        className="w-full group relative overflow-hidden"
                         style={{ animationDelay: `${idx * 50}ms` }}
                       >
-                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-claude-orange/20 to-amber-500/10 flex items-center justify-center group-hover:from-claude-orange/30 group-hover:to-amber-500/20 transition-all">
-                          <FolderOpen size={16} className="text-claude-orange" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                        <div className="relative flex items-center gap-3 px-4 py-4 rounded-xl border border-transparent hover:border-orange-500/20 hover:bg-white/5 transition-all duration-300 fade-up">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/10 flex items-center justify-center group-hover:shadow-lg group-hover:shadow-orange-500/20 transition-all border border-orange-500/20">
+                            <FolderOpen size={18} className="text-orange-400" />
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-sm text-white font-medium truncate">{project.name.split('/').pop()}</p>
+                            <p className="text-xs text-white/40 font-mono flex items-center gap-2 mt-0.5">
+                              <span className="text-cyan-400">{project.sessionCount}</span> sessions
+                              <span className="text-white/20">|</span>
+                              {formatDate(project.lastActivity)}
+                            </p>
+                          </div>
+                          <ChevronRight size={16} className="text-white/20 group-hover:text-orange-400 group-hover:translate-x-1 transition-all" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-claude-text truncate font-medium">{project.name.split('/').pop()}</p>
-                          <p className="text-xs text-claude-muted flex items-center gap-2">
-                            <span>{project.sessionCount} sessions</span>
-                            <span className="w-1 h-1 rounded-full bg-claude-muted/50" />
-                            <span>{formatDate(project.lastActivity)}</span>
-                          </p>
-                        </div>
-                        <ChevronRight size={16} className="text-claude-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                       </button>
                     ))
                   )}
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <button
                     onClick={() => { setSelectedProject(null); setSessions([]); setSelectedSession(null); }}
-                    className="w-full flex items-center gap-2 px-3 py-2 mb-3 text-sm text-claude-muted
-                      hover:text-claude-orange transition-colors rounded-lg hover:bg-white/5"
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-white/50
+                      hover:text-cyan-400 transition-colors rounded-xl hover:bg-white/5 font-mono"
                   >
                     <ChevronRight size={16} className="rotate-180" />
-                    Back to Projects
+                    ../BACK
                   </button>
 
-                  <div className="px-2 py-2 mb-2">
-                    <p className="text-sm font-medium text-claude-text truncate">{selectedProject.name.split('/').pop()}</p>
-                    <p className="text-xs text-claude-muted">{sessions.length} sessions</p>
+                  <div className="px-4 py-3 bg-white/5 rounded-xl border border-white/5">
+                    <p className="text-sm font-medium text-white truncate">{selectedProject.name.split('/').pop()}</p>
+                    <p className="text-xs text-cyan-400/60 font-mono mt-1">{sessions.length} RECORDS FOUND</p>
                   </div>
 
                   {loading ? (
-                    <div className="py-12 text-center">
-                      <div className="w-8 h-8 border-2 border-claude-orange/30 border-t-claude-orange rounded-full animate-spin mx-auto" />
+                    <div className="py-16 text-center">
+                      <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mx-auto" />
                     </div>
                   ) : (
                     sessions.map((session, idx) => (
                       <button
                         key={session.id}
                         onClick={() => handleSessionSelect(session)}
-                        className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl
-                          transition-all duration-200 text-left group fade-up
-                          ${selectedSession?.id === session.id
-                            ? 'bg-gradient-to-r from-claude-orange/10 to-transparent border-l-2 border-claude-orange'
-                            : 'hover:bg-white/5'}`}
+                        className={`w-full group relative overflow-hidden fade-up`}
                         style={{ animationDelay: `${idx * 30}ms` }}
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                        <div className={`relative flex items-start gap-3 px-4 py-4 rounded-xl border transition-all duration-300
                           ${selectedSession?.id === session.id
-                            ? 'bg-claude-orange/20'
-                            : 'bg-claude-elevated group-hover:bg-claude-orange/10'}`}>
-                          <MessageSquare size={14} className={selectedSession?.id === session.id ? 'text-claude-orange' : 'text-claude-muted'} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-claude-text line-clamp-2">{session.summary || 'Empty session'}</p>
-                          <p className="text-xs text-claude-muted mt-1 flex items-center gap-2">
-                            <Clock size={10} />
-                            {formatDate(session.createdAt)}
-                            <span className="w-1 h-1 rounded-full bg-claude-muted/50" />
-                            {session.messages.length} msgs
-                          </p>
+                            ? 'bg-gradient-to-r from-cyan-500/10 to-transparent border-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                            : 'border-transparent hover:border-white/10 hover:bg-white/5'}`}
+                        >
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all border
+                            ${selectedSession?.id === session.id
+                              ? 'bg-cyan-500/20 border-cyan-500/30'
+                              : 'bg-white/5 border-white/10 group-hover:border-cyan-500/20'}`}>
+                            <MessageSquare size={15} className={selectedSession?.id === session.id ? 'text-cyan-400' : 'text-white/50'} />
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-sm text-white/90 line-clamp-2">{session.summary || 'Empty session'}</p>
+                            <p className="text-xs text-white/30 mt-1.5 flex items-center gap-2 font-mono">
+                              <Clock size={10} className="text-cyan-400/50" />
+                              {formatDate(session.createdAt)}
+                              <span className="text-white/10">|</span>
+                              <span className="text-cyan-400/50">{session.messages.length}</span> msg
+                            </p>
+                          </div>
                         </div>
                       </button>
                     ))
@@ -374,64 +426,70 @@ function App() {
             /* Search Results */
             <div className="space-y-3">
               {isSearching ? (
-                <div className="py-12 text-center">
-                  <div className="w-10 h-10 border-2 border-claude-orange/30 border-t-claude-orange rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-sm text-claude-muted">Searching...</p>
+                <div className="py-16 text-center">
+                  <div className="relative w-16 h-16 mx-auto mb-6">
+                    <div className="absolute inset-0 border-2 border-cyan-500/30 rounded-full animate-ping" />
+                    <div className="absolute inset-2 border-2 border-cyan-400/50 rounded-full animate-spin" />
+                    <div className="absolute inset-4 bg-cyan-500/20 rounded-full" />
+                  </div>
+                  <p className="text-sm text-cyan-400 font-mono animate-pulse">SCANNING MEMORY BANKS...</p>
                 </div>
               ) : searchResults.length > 0 ? (
                 <>
-                  <p className="text-xs text-claude-muted px-2 py-2 flex items-center gap-2">
-                    <Zap size={12} className="text-claude-orange" />
-                    {searchResults.length} sessions found
-                  </p>
+                  <div className="flex items-center gap-2 px-2 py-3">
+                    <Zap size={14} className="text-cyan-400" />
+                    <span className="text-xs text-cyan-400/80 font-mono uppercase tracking-wider">
+                      {searchResults.length} MATCHES FOUND
+                    </span>
+                  </div>
                   {searchResults.map((session, idx) => (
                     <div
                       key={`${session.project}-${session.id}`}
-                      className={`rounded-xl overflow-hidden border transition-all duration-200 fade-up
+                      className={`rounded-xl overflow-hidden border transition-all duration-300 fade-up
                         ${selectedSession?.id === session.id
-                          ? 'border-claude-orange/50 shadow-glow'
-                          : 'border-white/5 hover:border-white/10'}`}
+                          ? 'border-cyan-500/50 shadow-lg shadow-cyan-500/20'
+                          : 'border-white/5 hover:border-cyan-500/20'}`}
                       style={{ animationDelay: `${idx * 50}ms` }}
                     >
                       <button
                         onClick={() => handleSessionSelect(session)}
-                        className="w-full flex items-start gap-3 px-4 py-3 bg-claude-elevated/30
-                          hover:bg-claude-elevated/50 transition-all text-left"
+                        className="w-full flex items-start gap-3 px-4 py-4 bg-white/5 hover:bg-white/10 transition-all text-left"
                       >
-                        <MessageSquare size={16} className="text-claude-orange shrink-0 mt-0.5" />
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/20">
+                          <MessageSquare size={15} className="text-cyan-400" />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-claude-text line-clamp-1 font-medium">
+                          <p className="text-sm text-white font-medium line-clamp-1">
                             {session.summary || 'Session'}
                           </p>
-                          <p className="text-xs text-claude-muted mt-0.5">
-                            {formatDate(session.createdAt)} · {session.matches?.length || 0} matches
+                          <p className="text-xs text-white/40 mt-1 font-mono">
+                            {formatDate(session.createdAt)} | <span className="text-cyan-400">{session.matches?.length || 0}</span> hits
                           </p>
                         </div>
                       </button>
                       {session.matches && session.matches.length > 0 && (
-                        <div className="border-t border-white/5 bg-claude-bg/50">
+                        <div className="border-t border-white/5 bg-black/20">
                           {session.matches.slice(0, 3).map((match, mIdx) => (
                             <button
                               key={mIdx}
                               onClick={() => handleMatchClick(session, match.messageIndex)}
-                              className="w-full px-4 py-2.5 text-left hover:bg-white/5
-                                border-b border-white/5 last:border-b-0 transition-colors group"
+                              className="w-full px-4 py-3 text-left hover:bg-white/5 border-b border-white/5 last:border-b-0 transition-colors group"
                             >
-                              <span className={`text-xs font-medium mr-2 px-1.5 py-0.5 rounded
+                              <span className={`text-[10px] font-bold uppercase tracking-wider mr-2 px-2 py-1 rounded
                                 ${match.role === 'user'
                                   ? 'bg-blue-500/20 text-blue-400'
                                   : match.role === 'tool'
-                                    ? 'bg-gray-500/20 text-gray-400'
-                                    : 'bg-claude-orange/20 text-claude-orange'}`}>
-                                {match.role === 'user' ? 'You' : match.role === 'tool' ? 'Tool' : 'Claude'}
+                                    ? 'bg-purple-500/20 text-purple-400'
+                                    : 'bg-orange-500/20 text-orange-400'}`}>
+                                {match.role === 'user' ? 'YOU' : match.role === 'tool' ? 'TOOL' : 'AI'}
                               </span>
-                              <span className="text-xs text-claude-muted group-hover:text-claude-text transition-colors">
+                              <span className="text-xs text-white/50 group-hover:text-white/70 transition-colors font-mono">
                                 {match.preview}
                               </span>
                             </button>
                           ))}
                           {session.matches.length > 3 && (
-                            <p className="text-xs text-claude-muted px-4 py-2 text-center bg-claude-elevated/20">
+                            <p className="text-xs text-cyan-400/50 px-4 py-2 text-center font-mono">
                               +{session.matches.length - 3} more matches
                             </p>
                           )}
@@ -441,14 +499,14 @@ function App() {
                   ))}
                 </>
               ) : searchQuery ? (
-                <div className="py-12 text-center">
-                  <Search size={32} className="text-claude-muted/30 mx-auto mb-3" />
-                  <p className="text-sm text-claude-muted">No results found</p>
+                <div className="py-16 text-center">
+                  <Search size={40} className="text-white/10 mx-auto mb-4" />
+                  <p className="text-sm text-white/30 font-mono">NO MATCHES FOUND</p>
                 </div>
               ) : (
-                <div className="py-12 text-center">
-                  <Search size={32} className="text-claude-muted/30 mx-auto mb-3" />
-                  <p className="text-sm text-claude-muted">Enter a search term</p>
+                <div className="py-16 text-center">
+                  <Search size={40} className="text-white/10 mx-auto mb-4" />
+                  <p className="text-sm text-white/30 font-mono">ENTER SEARCH QUERY</p>
                 </div>
               )}
             </div>
@@ -456,13 +514,13 @@ function App() {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-white/5 bg-black/20">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-claude-muted flex items-center gap-2">
-              <Sparkles size={12} className="text-claude-orange" />
-              Déjà Claude
+            <span className="text-xs text-white/30 font-mono flex items-center gap-2">
+              <Cpu size={12} className="text-cyan-400/50" />
+              v1.0.0
             </span>
-            <button className="p-2 rounded-lg hover:bg-white/5 text-claude-muted hover:text-claude-text transition-all">
+            <button className="p-2 rounded-lg hover:bg-white/5 text-white/30 hover:text-white/70 transition-all">
               <Settings size={16} />
             </button>
           </div>
@@ -470,38 +528,59 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         {selectedSession ? (
           <>
             {/* Session Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 glass-dark">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-claude-orange/20 to-amber-500/10 flex items-center justify-center">
-                  <MessageSquare size={18} className="text-claude-orange" />
+            <div className="relative flex items-center justify-between px-8 py-5 border-b border-white/5 bg-gradient-to-r from-[#0a0a18]/90 to-[#0a0a18]/70 backdrop-blur-xl">
+              <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+
+              <div className="flex items-center gap-5">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-cyan-500/30 rounded-xl blur-lg" />
+                  <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/30">
+                    <MessageSquare size={20} className="text-cyan-400" />
+                  </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-claude-text">
+                  <p className="text-base font-medium text-white">
                     {truncate(selectedSession.summary || 'Session', 60)}
                   </p>
-                  <p className="text-xs text-claude-muted flex items-center gap-2">
-                    <Calendar size={12} />
-                    {new Date(selectedSession.createdAt).toLocaleString()}
-                    <span className="w-1 h-1 rounded-full bg-claude-muted/50" />
-                    {selectedSession.messages.length} messages
+                  <p className="text-xs text-white/40 flex items-center gap-3 mt-1 font-mono">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar size={12} className="text-cyan-400/50" />
+                      {new Date(selectedSession.createdAt).toLocaleString()}
+                    </span>
+                    <span className="text-white/20">|</span>
+                    <span className="text-cyan-400">{selectedSession.messages.length}</span> messages
                   </p>
                 </div>
               </div>
+
               <button
                 onClick={exportToMarkdown}
-                className="flex items-center gap-2 px-4 py-2.5 btn-primary rounded-xl text-sm font-medium"
+                disabled={exporting}
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-300
+                  ${exporting
+                    ? 'bg-white/10 text-white/50 cursor-wait'
+                    : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:shadow-xl hover:shadow-orange-500/30 hover:-translate-y-0.5'}`}
               >
-                <Download size={16} />
-                Export
+                {exporting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Export
+                  </>
+                )}
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto" ref={messagesContainerRef}>
+            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-black/20" ref={messagesContainerRef}>
               {selectedSession.messages.map((msg, idx) => {
                 const isHighlighted = highlightedMessageIdx === idx;
                 const hasSearchMatch = activeSearchQuery && msg.content.toLowerCase().includes(activeSearchQuery.toLowerCase());
@@ -510,54 +589,56 @@ function App() {
                   <div
                     key={idx}
                     data-message-idx={idx}
-                    className={`px-6 py-5 border-b border-white/5 transition-all duration-500 fade-up
+                    className={`relative px-8 py-6 border-b border-white/5 transition-all duration-500 fade-up
                       ${msg.role === 'user'
                         ? 'bg-transparent'
                         : msg.role === 'tool'
-                          ? 'bg-claude-elevated/20'
-                          : 'bg-claude-surface/30'}
-                      ${isHighlighted ? 'highlight-message bg-claude-orange/5' : ''}
-                      ${hasSearchMatch && !isHighlighted ? 'border-l-2 border-l-claude-orange' : ''}`}
+                          ? 'bg-purple-500/5'
+                          : 'bg-cyan-500/5'}
+                      ${isHighlighted ? 'highlight-message' : ''}
+                      ${hasSearchMatch && !isHighlighted ? 'border-l-2 border-l-cyan-500' : ''}`}
                     style={{ animationDelay: `${idx * 20}ms` }}
                   >
                     <div className="max-w-4xl mx-auto">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold uppercase border
                           ${msg.role === 'user'
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                            ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30 text-blue-400'
                             : msg.role === 'tool'
-                              ? 'bg-gradient-to-br from-gray-600 to-gray-700 text-white'
-                              : 'bg-gradient-to-br from-claude-orange to-amber-500 text-white'}`}>
-                          {msg.role === 'user' ? 'Y' : msg.role === 'tool' ? 'T' : 'C'}
+                              ? 'bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-purple-500/30 text-purple-400'
+                              : 'bg-gradient-to-br from-orange-500/20 to-amber-500/20 border-orange-500/30 text-orange-400'}`}>
+                          {msg.role === 'user' ? 'YOU' : msg.role === 'tool' ? 'T' : 'AI'}
                         </div>
-                        <span className="font-medium text-claude-text text-sm">
-                          {msg.role === 'user' ? 'You' : msg.role === 'tool' ? `Tool: ${msg.toolName}` : 'Claude'}
-                        </span>
-                        {msg.timestamp && (
-                          <span className="text-xs text-claude-muted">
-                            {new Date(msg.timestamp).toLocaleTimeString()}
+                        <div className="flex-1">
+                          <span className="font-semibold text-white text-sm">
+                            {msg.role === 'user' ? 'You' : msg.role === 'tool' ? `Tool: ${msg.toolName}` : 'Claude'}
                           </span>
-                        )}
+                          {msg.timestamp && (
+                            <span className="text-xs text-white/30 ml-3 font-mono">
+                              {new Date(msg.timestamp).toLocaleTimeString()}
+                            </span>
+                          )}
+                        </div>
                         {hasSearchMatch && (
-                          <span className="text-xs bg-claude-orange/20 text-claude-orange px-2 py-0.5 rounded-full font-medium">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full border border-cyan-500/30">
                             Match
                           </span>
                         )}
                       </div>
-                      <div className="pl-11">
+                      <div className="pl-14">
                         {msg.role === 'tool' && msg.toolInput ? (
-                          <details className="text-claude-muted">
-                            <summary className="cursor-pointer text-claude-text hover:text-claude-orange transition-colors text-sm">
+                          <details className="group">
+                            <summary className="cursor-pointer text-white/80 hover:text-cyan-400 transition-colors text-sm font-medium">
                               {msg.content}
                             </summary>
-                            <pre className="mt-3 p-4 bg-claude-bg/50 rounded-xl text-xs overflow-x-auto border border-white/5 font-mono">
+                            <pre className="mt-4 p-5 bg-black/30 rounded-xl text-xs overflow-x-auto border border-white/5 font-mono text-cyan-300/80">
                               {msg.toolInput}
                             </pre>
                           </details>
                         ) : (
-                          <pre className="whitespace-pre-wrap font-sans text-claude-text text-sm leading-relaxed">
+                          <div className="whitespace-pre-wrap text-white/80 text-sm leading-relaxed">
                             {activeSearchQuery ? highlightSearchTerm(msg.content, activeSearchQuery) : msg.content}
-                          </pre>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -570,30 +651,42 @@ function App() {
           /* Empty State */
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center max-w-lg px-8">
-              <div className="relative w-24 h-24 mx-auto mb-8">
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-claude-orange/20 to-amber-500/10 animate-pulse" />
-                <div className="absolute inset-2 rounded-2xl bg-claude-surface flex items-center justify-center">
-                  <Sparkles size={36} className="text-claude-orange float" />
+              {/* Animated Logo */}
+              <div className="relative w-32 h-32 mx-auto mb-10">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-cyan-500/20 rounded-3xl blur-2xl animate-pulse" />
+                <div className="absolute inset-0 border-2 border-orange-500/20 rounded-3xl animate-spin" style={{ animationDuration: '8s' }} />
+                <div className="absolute inset-4 border border-cyan-500/30 rounded-2xl" />
+                <div className="absolute inset-8 bg-gradient-to-br from-[#0a0a18] to-[#050510] rounded-xl flex items-center justify-center">
+                  <Sparkles size={32} className="text-orange-400 float" />
                 </div>
               </div>
-              <h2 className="text-3xl font-bold gradient-text mb-4">Déjà Claude</h2>
-              <p className="text-claude-muted leading-relaxed text-lg mb-2">
+
+              <h2 className="text-4xl font-bold font-cyber gradient-text mb-4 tracking-wider">DÉJÀ CLAUDE</h2>
+              <p className="text-white/50 text-lg mb-2 italic">
                 "I know I asked Claude about this before..."
               </p>
-              <p className="text-claude-muted/70 text-sm">
-                Search, browse, and export your conversation history.
+              <p className="text-white/30 text-sm font-mono">
+                SEARCH // BROWSE // EXPORT
               </p>
-              <div className="mt-8 flex justify-center gap-6 text-sm">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-claude-elevated/30 border border-white/5">
-                  <FolderOpen size={16} className="text-claude-orange" />
-                  <span className="text-claude-text font-medium">{projects.length}</span>
-                  <span className="text-claude-muted">projects</span>
+
+              <div className="mt-10 flex justify-center gap-4">
+                <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-white/5 border border-white/10">
+                  <FolderOpen size={18} className="text-orange-400" />
+                  <span className="text-white font-bold text-lg">{projects.length}</span>
+                  <span className="text-white/40 text-sm font-mono">PROJECTS</span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-claude-elevated/30 border border-white/5">
-                  <MessageSquare size={16} className="text-claude-orange" />
-                  <span className="text-claude-text font-medium">{totalSessions}</span>
-                  <span className="text-claude-muted">sessions</span>
+                <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-white/5 border border-white/10">
+                  <MessageSquare size={18} className="text-cyan-400" />
+                  <span className="text-white font-bold text-lg">{totalSessions}</span>
+                  <span className="text-white/40 text-sm font-mono">SESSIONS</span>
                 </div>
+              </div>
+
+              {/* Tech lines decoration */}
+              <div className="mt-12 flex items-center justify-center gap-2">
+                <div className="w-20 h-px bg-gradient-to-r from-transparent to-orange-500/50" />
+                <Hash size={14} className="text-white/20" />
+                <div className="w-20 h-px bg-gradient-to-l from-transparent to-cyan-500/50" />
               </div>
             </div>
           </div>
