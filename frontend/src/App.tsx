@@ -564,26 +564,33 @@ function App() {
                 </div>
               </div>
 
-              <button
-                onClick={exportToMarkdown}
-                disabled={exporting}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-300
-                  ${exporting
-                    ? 'bg-white/10 text-white/50 cursor-wait'
-                    : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:shadow-xl hover:shadow-orange-500/30 hover:-translate-y-0.5'}`}
-              >
-                {exporting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download size={16} />
-                    Export
-                  </>
+              <div className="flex items-center gap-4">
+                {exporting && (
+                  <p className="text-xs text-white/50 font-mono animate-pulse max-w-[200px] text-right">
+                    Converting... save dialog may take up to 60s
+                  </p>
                 )}
-              </button>
+                <button
+                  onClick={exportToMarkdown}
+                  disabled={exporting}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-300
+                    ${exporting
+                      ? 'bg-white/10 text-white/50 cursor-wait'
+                      : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:shadow-xl hover:shadow-orange-500/30 hover:-translate-y-0.5'}`}
+                >
+                  {exporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      Export
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
