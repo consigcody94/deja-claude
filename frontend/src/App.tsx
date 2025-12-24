@@ -1,7 +1,9 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, ChevronRight, Zap, Clock, Hash, Terminal, Cpu, Database, Bookmark, BookmarkCheck, BarChart3, Filter, X, Copy, Check, ChevronDown, ChevronUp, Tag, StickyNote, Minimize2, Type } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, ChevronRight, Zap, Clock, Hash, Terminal, Cpu, Database, Bookmark, BookmarkCheck, BarChart3, Filter, X, Copy, Check, ChevronDown, ChevronUp, Tag, StickyNote, Minimize2, Type, TrendingUp, Layers } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { ToastContainer, toast, SessionTimeline, SessionInsights, ActivityHeatmap } from './components';
+import { useDebounce } from './hooks';
 
 // Code block component with copy button
 const CodeBlock = ({ code, language }: { code: string; language?: string }) => {
@@ -155,8 +157,13 @@ function App() {
   const [newTag, setNewTag] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [collapsedTools, setCollapsedTools] = useState<Set<number>>(new Set());
+  const [messageFilters, setMessageFilters] = useState<Set<string>>(new Set(['user', 'assistant', 'tool']));
+  const [showInsights, setShowInsights] = useState(true);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
+
+  // Debounced search
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Load bookmarks from localStorage
   useEffect(() => {
@@ -177,11 +184,49 @@ function App() {
     const newBookmarks = new Set(bookmarks);
     if (newBookmarks.has(key)) {
       newBookmarks.delete(key);
+      toast.bookmark('Bookmark removed');
     } else {
       newBookmarks.add(key);
+      toast.bookmark('Session bookmarked');
     }
     saveBookmarks(newBookmarks);
   };
+
+  // Toggle message filter
+  const toggleMessageFilter = (filter: string) => {
+    const newFilters = new Set(messageFilters);
+    if (newFilters.has(filter)) {
+      if (newFilters.size > 1) {
+        newFilters.delete(filter);
+      }
+    } else {
+      newFilters.add(filter);
+    }
+    setMessageFilters(newFilters);
+  };
+
+  // Filtered messages based on message type filter
+  const filteredMessages = useMemo(() => {
+    if (!selectedSession) return [];
+    return selectedSession.messages.filter(m => messageFilters.has(m.role));
+  }, [selectedSession, messageFilters]);
+
+  // Message counts for filter
+  const messageCounts = useMemo(() => {
+    if (!selectedSession) return { user: 0, assistant: 0, tool: 0 };
+    return {
+      user: selectedSession.messages.filter(m => m.role === 'user').length,
+      assistant: selectedSession.messages.filter(m => m.role === 'assistant').length,
+      tool: selectedSession.messages.filter(m => m.role === 'tool').length,
+    };
+  }, [selectedSession]);
+
+  // Auto-search with debounce
+  useEffect(() => {
+    if (debouncedSearchQuery.trim() && view === 'search') {
+      handleSearch();
+    }
+  }, [debouncedSearchQuery]);
 
   const isBookmarked = (sessionId: string, projectPath: string) => {
     return bookmarks.has(`${projectPath}:${sessionId}`);
@@ -604,12 +649,25 @@ function App() {
 
         URL.revokeObjectURL(url);
         setExporting(false);
+        toast.success('Session exported to Markdown');
       } catch (error) {
         console.error('Export failed:', error);
         setExporting(false);
+        toast.error('Export failed');
       }
     });
   }, [selectedSession, exporting]);
+
+  // Jump to message in session
+  const jumpToMessage = (index: number) => {
+    if (messagesContainerRef.current) {
+      const messageEl = messagesContainerRef.current.querySelector(`[data-message-idx="${index}"]`);
+      if (messageEl) {
+        messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHighlightedMessageIdx(index);
+      }
+    }
+  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -1129,6 +1187,9 @@ function App() {
                 <span className="text-xs text-cyan-400/80 font-mono uppercase tracking-wider">USAGE STATISTICS</span>
               </div>
 
+              {/* Activity Heatmap */}
+              <ActivityHeatmap sessions={sessions.length > 0 ? sessions : searchResults} weeks={8} />
+
               {stats && (
                 <div className="space-y-3">
                   {[
@@ -1303,8 +1364,64 @@ function App() {
               </div>
             </div>
 
+            {/* Session Timeline & Insights */}
+            {selectedSession && (
+              <div className="px-8 py-4 border-b border-white/5 bg-gradient-to-r from-white/5 to-transparent">
+                <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Timeline */}
+                  <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+                    <SessionTimeline
+                      messages={selectedSession.messages}
+                      onJumpTo={jumpToMessage}
+                      highlightedIndex={highlightedMessageIdx}
+                    />
+                  </div>
+
+                  {/* Insights toggle */}
+                  <div>
+                    <button
+                      onClick={() => setShowInsights(!showInsights)}
+                      className="flex items-center gap-2 text-xs text-white/50 hover:text-cyan-400 mb-2"
+                    >
+                      <Layers size={12} />
+                      {showInsights ? 'Hide' : 'Show'} Insights
+                    </button>
+                    {showInsights && (
+                      <SessionInsights
+                        messages={selectedSession.messages}
+                        createdAt={selectedSession.createdAt}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Message Type Filters */}
+                <div className="max-w-4xl mx-auto mt-4 flex items-center gap-2">
+                  <span className="text-[10px] text-white/40 uppercase tracking-wider">Show:</span>
+                  {[
+                    { id: 'user', label: 'You', color: 'blue', count: messageCounts.user },
+                    { id: 'assistant', label: 'Claude', color: 'orange', count: messageCounts.assistant },
+                    { id: 'tool', label: 'Tools', color: 'purple', count: messageCounts.tool },
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => toggleMessageFilter(f.id)}
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-all ${
+                        messageFilters.has(f.id)
+                          ? `bg-${f.color}-500/20 text-${f.color}-400 border border-${f.color}-500/30`
+                          : 'bg-white/5 text-white/40 border border-transparent hover:bg-white/10'
+                      }`}
+                    >
+                      <span>{f.label}</span>
+                      <span className="font-mono text-[10px] opacity-70">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Session Tags & Notes */}
-            {selectedProject && (
+            {selectedProject && selectedSession && (
               <div className="px-8 py-3 border-b border-white/5 bg-white/5 flex items-center gap-4 flex-wrap">
                 {/* Tags */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1394,15 +1511,17 @@ function App() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-black/20" ref={messagesContainerRef} style={{ fontSize: `${fontSize}px` }}>
-              {selectedSession.messages.map((msg, idx) => {
-                const isHighlighted = highlightedMessageIdx === idx;
+              {filteredMessages.map((msg, idx) => {
+                // Get the original index for highlighting
+                const originalIdx = selectedSession.messages.indexOf(msg);
+                const isHighlighted = highlightedMessageIdx === originalIdx;
                 const hasSearchMatch = activeSearchQuery && msg.content.toLowerCase().includes(activeSearchQuery.toLowerCase());
-                const isToolCollapsed = collapsedTools.has(idx);
+                const isToolCollapsed = collapsedTools.has(originalIdx);
 
                 return (
                   <div
-                    key={idx}
-                    data-message-idx={idx}
+                    key={originalIdx}
+                    data-message-idx={originalIdx}
                     className={`relative px-8 ${compactView ? 'py-3' : 'py-6'} border-b border-white/5 transition-all duration-500
                       ${msg.role === 'user' ? 'bg-transparent' : msg.role === 'tool' ? 'bg-purple-500/5' : 'bg-cyan-500/5'}
                       ${isHighlighted ? 'highlight-message' : ''}
@@ -1428,7 +1547,7 @@ function App() {
                         </div>
                         {msg.role === 'tool' && msg.toolInput && (
                           <button
-                            onClick={() => toggleToolCollapse(idx)}
+                            onClick={() => toggleToolCollapse(originalIdx)}
                             className="p-1 text-white/30 hover:text-white/70 transition-colors"
                           >
                             {isToolCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -1505,6 +1624,9 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 }
