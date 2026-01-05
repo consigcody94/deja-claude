@@ -15,7 +15,7 @@
     "start": "npm run start -w backend"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
+    "concurrently": "^9.2.1",
     "puppeteer": "^24.34.0"
   }
 }
