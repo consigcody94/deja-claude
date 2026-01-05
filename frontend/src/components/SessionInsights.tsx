@@ -14,7 +14,7 @@ interface SessionInsightsProps {
   createdAt: string;
 }
 
-export function SessionInsights({ messages, createdAt }: SessionInsightsProps) {
+export function SessionInsights({ messages }: SessionInsightsProps) {
   const insights = useMemo(() => {
     const userMessages = messages.filter(m => m.role === 'user');
     const assistantMessages = messages.filter(m => m.role === 'assistant');

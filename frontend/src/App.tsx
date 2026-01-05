@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, ChevronRight, Zap, Clock, Hash, Terminal, Cpu, Database, Bookmark, BookmarkCheck, BarChart3, Filter, X, Copy, Check, ChevronDown, ChevronUp, Tag, StickyNote, Minimize2, Type, TrendingUp, Layers } from 'lucide-react';
+import { Search, FolderOpen, MessageSquare, Download, Settings, RefreshCw, Calendar, ChevronRight, Zap, Clock, Hash, Terminal, Cpu, Database, Bookmark, BookmarkCheck, BarChart3, Filter, X, Copy, Check, ChevronDown, ChevronUp, Tag, StickyNote, Minimize2, Type, Layers } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ToastContainer, toast, SessionTimeline, SessionInsights, ActivityHeatmap } from './components';
@@ -1511,7 +1511,7 @@ function App() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-black/20" ref={messagesContainerRef} style={{ fontSize: `${fontSize}px` }}>
-              {filteredMessages.map((msg, idx) => {
+              {filteredMessages.map((msg) => {
                 // Get the original index for highlighting
                 const originalIdx = selectedSession.messages.indexOf(msg);
                 const isHighlighted = highlightedMessageIdx === originalIdx;
